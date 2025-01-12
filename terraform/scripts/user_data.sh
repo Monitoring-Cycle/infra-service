@@ -3,13 +3,20 @@
 
 yum update -y
 
-yum install -y docker
-systemctl start docker
-systemctl enable docker
+sudo yum update -y
+sudo yum install -y jq docker
 
-# Instalar o Docker Compose
-curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
-chmod +x /usr/local/bin/docker-compose
+
+# Enable Docker service
+sudo service docker start
+sudo usermod -a -G docker ec2-user
+
+# Get the latest version of Docker Compose 
+DOCKER_COMPOSE_VERSION=$(curl -s https://api.github.com/repos/docker/compose/releases/latest | jq -r .tag_name)
+
+# Install Docker Compose
+sudo curl -L "https://github.com/docker/compose/releases/download/${DOCKER_COMPOSE_VERSION}/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+sudo chmod +x /usr/local/bin/docker-compose
 
 # Criar o Dockerfile
 cat << 'EOF' > /home/ec2-user/Dockerfile

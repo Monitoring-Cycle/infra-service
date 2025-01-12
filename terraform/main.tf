@@ -70,7 +70,7 @@ data "template_file" "user_data" {
 }
 
 resource "aws_instance" "ec2_instance" {
-  ami                    = "ami-05576a079321f21f8"
+  ami                    = "ami-0e2c8caa4b6378d8c"
   instance_type          = var.instance_type
   key_name               = var.key_name
   subnet_id              = aws_subnet.main.id
