@@ -1,2 +1,2 @@
 instance_type = "t3.large"
-key_name      = "devops-key"
+key_name      = "terraform-lab"
