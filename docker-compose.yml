@@ -1,0 +1,95 @@
+version: "3.8"
+
+services:
+  zabbix-server:
+    image: zabbix/zabbix-server-mysql:latest
+    container_name: zabbix-server
+    environment:
+      DB_SERVER_HOST: ${DB_SERVER_HOST}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+    ports:
+      - "10051:10051"
+    volumes:
+      - ${CONFIG_DIR}/zabbix-server.conf:/etc/zabbix/zabbix_server.conf
+      - ./volumes/zabbix-server:/var/lib/zabbix
+    depends_on:
+      - zabbix-db
+    restart: always
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    networks:
+      - zabbix-network
+
+  zabbix-db:
+    image: mysql:8.0
+    container_name: zabbix-db
+    environment:
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+    volumes:
+      - ./volumes/zabbix-db:/var/lib/mysql
+    restart: always
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    networks:
+      - zabbix-network
+
+  zabbix-proxy:
+    image: zabbix/zabbix-proxy-sqlite3:latest
+    container_name: zabbix-proxy
+    environment:
+      ZBX_SERVER_HOST: ${ZBX_PROXY_SERVER_HOST}
+      ZBX_PROXY_NAME: ${ZBX_PROXY_NAME}
+    ports:
+      - "10052:10050" # Alterado para resolver conflito
+    volumes:
+      - ${CONFIG_DIR}/proxy/zabbix-proxy.conf:/etc/zabbix/zabbix_proxy.conf
+      - ./volumes/zabbix-proxy:/var/lib/zabbix
+    restart: always
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    networks:
+      - zabbix-network
+
+  zabbix-agent:
+    image: zabbix/zabbix-agent:latest
+    container_name: zabbix-agent
+    environment:
+      ZBX_HOSTNAME: ${ZBX_HOSTNAME}
+      ZBX_SERVER_HOST: ${ZBX_SERVER_HOST}
+    ports:
+      - "10050:10050" # Mantida para o agente
+    volumes:
+      - ${CONFIG_DIR}/zabbix-agent.conf:/etc/zabbix/zabbix_agent.conf
+    restart: always
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    networks:
+      - zabbix-network
+
+  ubuntu-debian:
+    image: ubuntu:latest
+    container_name: ubuntu-debian
+    restart: always
+    networks:
+      - zabbix-network
+
+networks:
+  zabbix-network:
+    driver: bridge
