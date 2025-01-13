@@ -64,10 +64,10 @@ resource "aws_security_group_rule" "allow_ssh" {
   security_group_id = aws_security_group.ssh_access.id
 }
 
-data "template_file" "user_data" {
-  template = file("./scripts/user_data.sh")
+# data "template_file" "user_data" {
+#   template = file("./scripts/user_data.sh")
 
-}
+# }
 
 resource "aws_instance" "ec2_instance" {
   ami                    = "ami-0e2c8caa4b6378d8c"

@@ -8,6 +8,10 @@ variable "key_name" {
   description = "Nome da chave SSH para acessar a instância"
   type        = string
 }
+variable "docker_compose_version" {
+  description = "The version of Docker Compose to install"
+  default     = "2.22.0"
+}
 
 variable "ec2_user_data" {
   description = "The user data script to install Docker on the EC2 instance"
