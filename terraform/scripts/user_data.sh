@@ -1,50 +1,29 @@
 #!/bin/bash
-# Script de inicialização para configurar a instância com Docker e Zabbix
+# Atualizar pacotes e instalar dependências
+apt-get update -y
+apt-get install -y apt-transport-https ca-certificates curl software-properties-common
 
-yum update -y
+# Adicionar chave GPG e repositório oficial do Docker
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg | apt-key add -
+add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
 
-yum install -y docker
+# Atualizar pacotes novamente e instalar Docker
+apt-get update -y
+apt-get install -y docker-ce
+
+# Iniciar e habilitar o Docker
 systemctl start docker
 systemctl enable docker
 
-# Instalar o Docker Compose
-curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
-chmod +x /usr/local/bin/docker-compose
+# Pré-download da imagem do Zabbix
+docker pull zabbix/zabbix-appliance:latest
 
-# Criar o Dockerfile
-cat << 'EOF' > /home/ec2-user/Dockerfile
-FROM amazonlinux:2
+# Subir o container Zabbix
+docker run -d \
+  --name zabbix-server \
+  -p 8080:80 \
+  -p 10051:10051 \
+  zabbix/zabbix-appliance:latest
 
-RUN yum update -y && \
-    yum install -y \
-        curl \
-        tar \
-        unzip \
-        sudo \
-        vim \
-        device-mapper-persistent-data \
-        lvm2 && \
-    amazon-linux-extras enable docker && \
-    yum install -y docker && \
-    curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose && \
-    chmod +x /usr/local/bin/docker-compose && \
-    yum clean all
-
-RUN groupadd docker && \
-    usermod -aG docker ec2-user
-
-RUN docker pull zabbix/zabbix-server-mysql:latest && \
-    docker pull zabbix/zabbix-agent:latest
-
-RUN systemctl enable docker
-
-EXPOSE 2375
-EXPOSE 10051 10050
-
-CMD ["/bin/bash"]
-EOF
-
-# Construir e executar o container
-cd /home/ec2-user
-docker build -t zabbix-monitoring .
-docker run -d -p 10051:10051 -p 10050:10050 zabbix-monitoring
+# Verificar se o container foi iniciado corretamente
+docker ps | grep zabbix-server

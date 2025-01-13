@@ -1,7 +1,7 @@
 variable "instance_type" {
   description = "Tipo de máquina EC2"
   type        = string
-  default     = "t2.micro"
+  default     = "t3.large"
 }
 
 variable "key_name" {
