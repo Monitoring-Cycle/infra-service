@@ -78,7 +78,7 @@ resource "aws_security_group_rule" "allow_zabbix_http" {
   type              = "ingress"
   from_port         = 80
   to_port           = 80
-  protocol          = "tcp"
+  protocol          = "-1"
   cidr_blocks       = ["0.0.0.0/0"]
   security_group_id = aws_security_group.zabbix_access.id
 }
@@ -88,7 +88,7 @@ resource "aws_security_group_rule" "allow_zabbix_server" {
   type              = "ingress"
   from_port         = 10051
   to_port           = 10051
-  protocol          = "tcp"
+  protocol          = "-1"
   cidr_blocks       = ["0.0.0.0/0"]
   security_group_id = aws_security_group.zabbix_access.id
 }
@@ -100,10 +100,10 @@ data "template_file" "user_data" {
 
 # Criar a Instância EC2 com o Script de User Data
 resource "aws_instance" "ec2_instance" {
-  ami                    = "ami-0e2c8caa4b6378d8c" # AMI Ubuntu 24.04
-  instance_type          = var.instance_type
-  key_name               = var.key_name
-  subnet_id              = aws_subnet.main.id
+  ami           = "ami-0e2c8caa4b6378d8c" # AMI Ubuntu 24.04
+  instance_type = var.instance_type
+  key_name      = var.key_name
+  subnet_id     = aws_subnet.main.id
   vpc_security_group_ids = [
     aws_security_group.ssh_access.id,
     aws_security_group.zabbix_access.id
