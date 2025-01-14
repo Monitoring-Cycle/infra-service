@@ -73,23 +73,12 @@ resource "aws_security_group" "zabbix_access" {
   }
 }
 
-# Regras de Segurança para Porta 80 (Web Interface do Zabbix)
-resource "aws_security_group_rule" "allow_zabbix_http" {
-  type              = "ingress"
-  from_port         = 80
-  to_port           = 80
-  protocol          = "-1"
-  cidr_blocks       = ["0.0.0.0/0"]
-  security_group_id = aws_security_group.zabbix_access.id
-}
-
-# Regras de Segurança para Porta 10051 (Zabbix Server)
-resource "aws_security_group_rule" "allow_zabbix_server" {
-  type              = "ingress"
-  from_port         = 10051
-  to_port           = 10051
-  protocol          = "-1"
-  cidr_blocks       = ["0.0.0.0/0"]
+resource "aws_security_group_rule" "allow_zabbix_egress" {
+  type              = "egress"
+  from_port         = 0
+  to_port           = 0
+  protocol          = "-1"          # Permitir qualquer protocolo
+  cidr_blocks       = ["0.0.0.0/0"] # Permitir saída para qualquer lugar
   security_group_id = aws_security_group.zabbix_access.id
 }
 
