@@ -45,71 +45,47 @@ resource "aws_route_table_association" "main" {
   route_table_id = aws_route_table.main.id
 }
 
-# Criar o Security Group para SSH
-resource "aws_security_group" "ssh_access" {
-  name        = "allow_ssh"
+# Criar o Security Group para SSH e Zabbix
+resource "aws_security_group" "main" {
+  name        = "zabbix-sg"
+  description = "Allow SSH and Zabbix access"
   vpc_id      = aws_vpc.main.id
-  description = "Allow SSH access"
-  tags = {
-    Name = "SSHAccessGroup"
+
+  ingress {
+    description = "Allow SSH"
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
   }
-}
 
-# Regras de Segurança para SSH (Ingress)
-resource "aws_security_group_rule" "allow_ssh" {
-  type              = "ingress"
-  from_port         = 22
-  to_port           = 22
-  protocol          = "tcp"
-  cidr_blocks       = ["0.0.0.0/0"] # Ajuste este bloco para restringir IPs específicos
-  security_group_id = aws_security_group.ssh_access.id
-}
-
-# Criar o Security Group para Zabbix
-resource "aws_security_group" "zabbix_access" {
-  name        = "zabbix_access"
-  vpc_id      = aws_vpc.main.id
-  description = "Allow Zabbix traffic"
-  tags = {
-    Name = "ZabbixAccessGroup"
+  ingress {
+    description = "Allow Zabbix HTTP"
+    from_port   = 8080
+    to_port     = 8080
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
   }
-}
 
-# Regras de Segurança para Zabbix (Ingress e Egress)
-resource "aws_security_group_rule" "allow_zabbix_http" {
-  type              = "ingress"
-  from_port         = 80
-  to_port           = 80
-  protocol          = "tcp"
-  cidr_blocks       = ["0.0.0.0/0"]
-  security_group_id = aws_security_group.zabbix_access.id
-}
+  ingress {
+    description = "Allow Zabbix Agent Port"
+    from_port   = 10051
+    to_port     = 10051
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
 
-resource "aws_security_group_rule" "allow_zabbix_https" {
-  type              = "ingress"
-  from_port         = 443
-  to_port           = 443
-  protocol          = "tcp"
-  cidr_blocks       = ["0.0.0.0/0"]
-  security_group_id = aws_security_group.zabbix_access.id
-}
+  egress {
+    description = "Allow all outbound traffic"
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
 
-resource "aws_security_group_rule" "allow_zabbix_tcp_10051" {
-  type              = "ingress"
-  from_port         = 10051
-  to_port           = 10051
-  protocol          = "tcp"
-  cidr_blocks       = ["0.0.0.0/0"]
-  security_group_id = aws_security_group.zabbix_access.id
-}
-
-resource "aws_security_group_rule" "allow_zabbix_egress" {
-  type              = "egress"
-  from_port         = 0
-  to_port           = 0
-  protocol          = "-1"
-  cidr_blocks       = ["0.0.0.0/0"]
-  security_group_id = aws_security_group.zabbix_access.id
+  tags = {
+    Name = "ZabbixSecurityGroup"
+  }
 }
 
 # Template File para o Script de User Data
@@ -125,8 +101,7 @@ resource "aws_instance" "ec2_instance" {
   subnet_id     = aws_subnet.main.id
 
   vpc_security_group_ids = [
-    aws_security_group.ssh_access.id,
-    aws_security_group.zabbix_access.id
+    aws_security_group.main.id
   ]
 
   associate_public_ip_address = true
@@ -135,6 +110,6 @@ resource "aws_instance" "ec2_instance" {
   user_data = data.template_file.user_data.rendered
 
   tags = {
-    Name = "ZabbixMachine"
+    Name = "ZabbixServerInstance"
   }
 }
