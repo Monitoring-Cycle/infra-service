@@ -47,38 +47,68 @@ resource "aws_route_table_association" "main" {
 
 # Criar o Security Group para SSH
 resource "aws_security_group" "ssh_access" {
-  name   = "allow_ssh"
-  vpc_id = aws_vpc.main.id
+  name        = "allow_ssh"
+  vpc_id      = aws_vpc.main.id
+  description = "Allow SSH access"
   tags = {
     Name = "SSHAccessGroup"
   }
 }
 
-# Regras de Segurança para SSH
+# Regras de Segurança para SSH (Ingress)
 resource "aws_security_group_rule" "allow_ssh" {
   type              = "ingress"
   from_port         = 22
   to_port           = 22
   protocol          = "tcp"
-  cidr_blocks       = ["0.0.0.0/0"]
+  cidr_blocks       = ["0.0.0.0/0"] # Ajuste este bloco para restringir IPs específicos
   security_group_id = aws_security_group.ssh_access.id
 }
 
 # Criar o Security Group para Zabbix
 resource "aws_security_group" "zabbix_access" {
-  name   = "zabbix_access"
-  vpc_id = aws_vpc.main.id
+  name        = "zabbix_access"
+  vpc_id      = aws_vpc.main.id
+  description = "Allow Zabbix traffic"
   tags = {
     Name = "ZabbixAccessGroup"
   }
+}
+
+# Regras de Segurança para Zabbix (Ingress e Egress)
+resource "aws_security_group_rule" "allow_zabbix_http" {
+  type              = "ingress"
+  from_port         = 80
+  to_port           = 80
+  protocol          = "tcp"
+  cidr_blocks       = ["0.0.0.0/0"]
+  security_group_id = aws_security_group.zabbix_access.id
+}
+
+resource "aws_security_group_rule" "allow_zabbix_https" {
+  type              = "ingress"
+  from_port         = 443
+  to_port           = 443
+  protocol          = "tcp"
+  cidr_blocks       = ["0.0.0.0/0"]
+  security_group_id = aws_security_group.zabbix_access.id
+}
+
+resource "aws_security_group_rule" "allow_zabbix_tcp_10051" {
+  type              = "ingress"
+  from_port         = 10051
+  to_port           = 10051
+  protocol          = "tcp"
+  cidr_blocks       = ["0.0.0.0/0"]
+  security_group_id = aws_security_group.zabbix_access.id
 }
 
 resource "aws_security_group_rule" "allow_zabbix_egress" {
   type              = "egress"
   from_port         = 0
   to_port           = 0
-  protocol          = "-1"          # Permitir qualquer protocolo
-  cidr_blocks       = ["0.0.0.0/0"] # Permitir saída para qualquer lugar
+  protocol          = "-1"
+  cidr_blocks       = ["0.0.0.0/0"]
   security_group_id = aws_security_group.zabbix_access.id
 }
 
@@ -93,6 +123,7 @@ resource "aws_instance" "ec2_instance" {
   instance_type = var.instance_type
   key_name      = var.key_name
   subnet_id     = aws_subnet.main.id
+
   vpc_security_group_ids = [
     aws_security_group.ssh_access.id,
     aws_security_group.zabbix_access.id

@@ -15,6 +15,20 @@ apt-get install -y docker-ce
 systemctl start docker
 systemctl enable docker
 
+# Criar o grupo 'docker' se não existir
+if ! getent group docker > /dev/null; then
+  groupadd docker
+fi
+
+# Adicionar o usuário padrão 'ubuntu' ao grupo 'docker'
+usermod -aG docker ubuntu
+
+# Ajustar permissões no socket do Docker
+chmod 660 /var/run/docker.sock
+
+# Reiniciar o Docker para garantir as permissões
+systemctl restart docker
+
 # Pré-download da imagem do Zabbix
 docker pull zabbix/zabbix-appliance:latest
 
@@ -27,3 +41,6 @@ docker run -d \
 
 # Verificar se o container foi iniciado corretamente
 docker ps | grep zabbix-server
+
+# Mensagem de conclusão
+echo "Docker e Zabbix foram configurados com sucesso. Por favor, reconecte-se para aplicar as permissões ao grupo docker."
