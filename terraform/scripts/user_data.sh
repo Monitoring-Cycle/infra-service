@@ -1,57 +1,46 @@
 #!/bin/bash
-# Script de inicialização para configurar a instância com Docker e Zabbix
+# Atualizar pacotes e instalar dependências
+apt-get update -y
+apt-get install -y apt-transport-https ca-certificates curl software-properties-common
 
-yum update -y
+# Adicionar chave GPG e repositório oficial do Docker
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg | apt-key add -
+add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
 
-sudo yum update -y
-sudo yum install -y jq docker
+# Atualizar pacotes novamente e instalar Docker
+apt-get update -y
+apt-get install -y docker-ce
 
+# Iniciar e habilitar o Docker
+systemctl start docker
+systemctl enable docker
 
-# Enable Docker service
-sudo service docker start
-sudo usermod -a -G docker ec2-user
+# Criar o grupo 'docker' se não existir
+if ! getent group docker > /dev/null; then
+  groupadd docker
+fi
 
-# Get the latest version of Docker Compose 
-DOCKER_COMPOSE_VERSION=$(curl -s https://api.github.com/repos/docker/compose/releases/latest | jq -r .tag_name)
+# Adicionar o usuário padrão 'ubuntu' ao grupo 'docker'
+usermod -aG docker ubuntu
 
-# Install Docker Compose
-sudo curl -L "https://github.com/docker/compose/releases/download/${DOCKER_COMPOSE_VERSION}/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
-sudo chmod +x /usr/local/bin/docker-compose
+# Ajustar permissões no socket do Docker
+chmod 660 /var/run/docker.sock
 
-# Criar o Dockerfile
-cat << 'EOF' > /home/ec2-user/Dockerfile
-FROM amazonlinux:2
+# Reiniciar o Docker para garantir as permissões
+systemctl restart docker
 
-RUN yum update -y && \
-    yum install -y \
-        curl \
-        tar \
-        unzip \
-        sudo \
-        vim \
-        device-mapper-persistent-data \
-        lvm2 && \
-    amazon-linux-extras enable docker && \
-    yum install -y docker && \
-    curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose && \
-    chmod +x /usr/local/bin/docker-compose && \
-    yum clean all
+# Pré-download da imagem do Zabbix
+docker pull zabbix/zabbix-appliance:latest
 
-RUN groupadd docker && \
-    usermod -aG docker ec2-user
+# Subir o container Zabbix
+docker run -d \
+  --name zabbix-server \
+  -p 8080:80 \
+  -p 10051:10051 \
+  zabbix/zabbix-appliance:latest
 
-RUN docker pull zabbix/zabbix-server-mysql:latest && \
-    docker pull zabbix/zabbix-agent:latest
+# Verificar se o container foi iniciado corretamente
+docker ps | grep zabbix-server
 
-RUN systemctl enable docker
-
-EXPOSE 2375
-EXPOSE 10051 10050
-
-CMD ["/bin/bash"]
-EOF
-
-# Construir e executar o container
-cd /home/ec2-user
-docker build -t zabbix-monitoring .
-docker run -d -p 10051:10051 -p 10050:10050 zabbix-monitoring
+# Mensagem de conclusão
+echo "Docker e Zabbix foram configurados com sucesso. Por favor, reconecte-se para aplicar as permissões ao grupo docker."
