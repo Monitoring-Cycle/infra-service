@@ -8,7 +8,7 @@ on:
 jobs:
   terraform:
     runs-on: ubuntu-latest
-    environment: production
+    # environment: production  <-- Remove this line for now
 
     steps:
       - name: Checkout code
@@ -27,7 +27,7 @@ jobs:
           terraform_version: 1.5.0
 
       - name: Initialize Terraform
-        run: terraform init terraform/
+        run: terraform init -chdir=terraform/
         env:
           TF_LOG: DEBUG
 
