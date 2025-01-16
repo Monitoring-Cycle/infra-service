@@ -8,10 +8,9 @@ on:
 jobs:
   terraform:
     runs-on: ubuntu-latest
-    # environment: production  <-- Remove this line for now
 
     steps:
-      - name: Checkout code
+      - name: Checkout código
         uses: actions/checkout@v3
 
       - name: Configure AWS credentials
@@ -21,21 +20,25 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: us-east-1
 
-      - name: Install Terraform
+      - name: Verificar estrutura de arquivos
+        run: |
+          echo "Diretório atual:"
+          pwd
+          echo "Arquivos no diretório terraform/:"
+          ls -la terraform/
+
+      - name: Instalar Terraform
         uses: hashicorp/setup-terraform@v2
         with:
           terraform_version: 1.5.0
 
-      - name: Initialize Terraform
-        run: terraform init -chdir=terraform/
+      - name: Inicializar Terraform
+        run: terraform init -chdir=terraform/ -input=false -reconfigure
         env:
           TF_LOG: DEBUG
 
-      - name: Validate Terraform
+      - name: Validar Terraform
         run: terraform validate -chdir=terraform/
 
-      - name: Plan Terraform
-        run: terraform plan -chdir=terraform/ -out=tfplan
-
-      - name: Apply Terraform
-        run: terraform apply -chdir=terraform/ tfplan
+      - name: Aplicar Terraform
+        run: terraform apply -auto-approve -chdir=terraform/
