@@ -38,7 +38,7 @@ jobs:
           TF_LOG: DEBUG
 
       - name: Validar Terraform
-        run: terraform validate -chdir=terraform/
+        run: terraform validate
 
       - name: Aplicar Terraform
-        run: terraform apply -auto-approve -chdir=terraform/
+        run: terraform apply -auto-approve
