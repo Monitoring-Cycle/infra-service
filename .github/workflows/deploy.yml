@@ -24,8 +24,6 @@ jobs:
         run: |
           echo "Diretório atual:"
           pwd
-          echo "Arquivos e diretórios no projeto:"
-          ls -R
           echo "Arquivos no diretório terraform/:"
           ls -la terraform/
 
