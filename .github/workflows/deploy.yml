@@ -54,10 +54,10 @@ jobs:
       - name: Step 08 - Terraform Plan
         run: terraform -chdir=./terraform/ plan -input=false
 
-      # Step 09 - Aplicar Terraform
-      - name: Step 09 - Terraform Apply
-        run: terraform -chdir=./terraform/ apply -auto-approve -input=false
+      # # Step 09 - Aplicar Terraform
+      # - name: Step 09 - Terraform Apply
+      #   run: terraform -chdir=./terraform/ apply -auto-approve -input=false
 
-      # # Step 10 - Destruir Terraform
-      # - name: Step 10 - Terraform Destroy
-      #   run: terraform -chdir=./terraform/ destroy -auto-approve -input=false
+      # Step 10 - Destruir Terraform
+      - name: Step 10 - Terraform Destroy
+        run: terraform -chdir=./terraform/ destroy -auto-approve -input=false
