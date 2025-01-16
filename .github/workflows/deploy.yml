@@ -36,24 +36,28 @@ jobs:
           ls -la
           ls -la terraform/
 
-      # Step 05 - Inicializar Terraform
-      - name: Step 05 - Terraform Init
+      # Step 05 - Remover estado local (evita conflitos de estado corrompido)
+      - name: Step 05 - Clean Terraform State
+        run: rm -rf terraform/.terraform terraform/.terraform.lock.hcl terraform/terraform.tfstate
+
+      # Step 06 - Inicializar Terraform
+      - name: Step 06 - Terraform Init
         run: terraform -chdir=./terraform/ init -input=false -reconfigure -upgrade
         env:
           TF_LOG: DEBUG
 
-      # Step 06 - Validar Terraform
-      - name: Step 06 - Terraform Validate
+      # Step 07 - Validar Terraform
+      - name: Step 07 - Terraform Validate
         run: terraform -chdir=./terraform/ validate
 
-      # Step 07 - Planejar Terraform
-      - name: Step 07 - Terraform Plan
+      # Step 08 - Planejar Terraform
+      - name: Step 08 - Terraform Plan
         run: terraform -chdir=./terraform/ plan -input=false
 
-      # Step 08 - Aplicar Terraform
-      - name: Step 08 - Terraform Apply
-        run: terraform -chdir=./terraform/ apply -input=false
+      # Step 09 - Aplicar Terraform
+      - name: Step 09 - Terraform Apply
+        run: terraform -chdir=./terraform/ apply -auto-approve -input=false
 
-      #   # Step 08 - Destruir Terraform
-      # - name: Step 08 - Terraform Apply
+      # Step 10 - Destruir Terraform (descomente se precisar destruir a infra automaticamente)
+      # - name: Step 10 - Terraform Destroy
       #   run: terraform -chdir=./terraform/ destroy -auto-approve -input=false
