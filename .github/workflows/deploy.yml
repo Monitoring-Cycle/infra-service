@@ -3,7 +3,7 @@ name: Deploy Zabbix Infrastructure
 on:
   push:
     branches:
-      - main
+      - developer
 
 jobs:
   terraform:
@@ -13,7 +13,7 @@ jobs:
       - name: Checkout código
         uses: actions/checkout@v3
 
-      - name: Configurar AWS CLI
+      - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v2
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
@@ -34,5 +34,5 @@ jobs:
       - name: Aplicar Terraform
         run: terraform apply -auto-approve
 
-      #- name: Destruir Terraform
-      #  run: terraform destroy -auto-approve
+      # - name: Destruir Terraform
+      #   run: terraform destroy -auto-approve
