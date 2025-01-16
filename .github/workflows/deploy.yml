@@ -1,4 +1,4 @@
-name: Deploy Zabbix Infrastructure
+name: AWS Pipeline
 
 on:
   push:
@@ -6,33 +6,54 @@ on:
       - main
 
 jobs:
-  terraform:
+  tf-run:
+    name: Terraform run on AWS
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout código
+      # Step 01 - Checkout do Código
+      - name: Step 01 - Checkout GitHub Repo
         uses: actions/checkout@v3
 
-      - name: Configurar AWS CLI
+      # Step 02 - Configurar Credenciais AWS
+      - name: Step 02 - Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v2
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: us-east-1
 
-      - name: Instalar Terraform
+      # Step 03 - Instalar Terraform
+      - name: Step 03 - Terraform Setup
         uses: hashicorp/setup-terraform@v2
         with:
           terraform_version: 1.5.0
 
-      - name: Inicializar Terraform
-        run: terraform init
+      # Step 04 - Debug Terraform Directory
+      - name: Debug Terraform Directory
+        run: |
+          pwd
+          ls -la
+          ls -la terraform/
 
-      - name: Validar Terraform
-        run: terraform validate
+      # Step 05 - Inicializar Terraform
+      - name: Step 05 - Terraform Init
+        run: terraform -chdir=./terraform/ init -input=false -reconfigure -upgrade
+        env:
+          TF_LOG: DEBUG
 
-      - name: Aplicar Terraform
-        run: terraform apply -auto-approve
+      # Step 06 - Validar Terraform
+      - name: Step 06 - Terraform Validate
+        run: terraform -chdir=./terraform/ validate
 
-      #- name: Destruir Terraform
-      #  run: terraform destroy -auto-approve
+      # Step 07 - Planejar Terraform
+      - name: Step 07 - Terraform Plan
+        run: terraform -chdir=./terraform/ plan -input=false
+
+      # Step 08 - Aplicar Terraform
+      - name: Step 08 - Terraform Apply
+        run: terraform -chdir=./terraform/ apply -input=false
+
+      #   # Step 08 - Destruir Terraform
+      # - name: Step 08 - Terraform Apply
+      #   run: terraform -chdir=./terraform/ destroy -auto-approve -input=false
