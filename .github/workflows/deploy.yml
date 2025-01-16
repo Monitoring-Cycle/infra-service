@@ -20,10 +20,11 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: us-east-1
 
+      - name: Testar credenciais AWS
+        run: aws sts get-caller-identity
+
       - name: Verificar estrutura de arquivos
         run: |
-          echo "Diretório atual:"
-          pwd
           echo "Arquivos no diretório terraform/:"
           ls -la terraform/
 
@@ -33,7 +34,7 @@ jobs:
           terraform_version: 1.5.0
 
       - name: Inicializar Terraform
-        run: terraform init -chdir=terraform/ -input=false -reconfigure
+        run: terraform init -chdir=terraform/ -input=false -reconfigure -upgrade
         env:
           TF_LOG: DEBUG
 
