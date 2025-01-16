@@ -33,7 +33,7 @@ jobs:
           terraform_version: 1.5.0
 
       - name: Inicializar Terraform
-        run: terraform init -chdir=terraform/ -input=false
+        run: terraform init
         env:
           TF_LOG: DEBUG
 
