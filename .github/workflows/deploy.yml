@@ -20,19 +20,25 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: us-east-1
 
+      - name: Listar arquivos no diretório atual
+        run: ls -R
+
+      - name: Listar arquivos no diretório Terraform
+        run: ls -R terraform/
+
       - name: Instalar Terraform
         uses: hashicorp/setup-terraform@v2
         with:
           terraform_version: 1.5.0
 
       - name: Inicializar Terraform
-        run: terraform init
+        run: terraform init -chdir=terraform/
 
       - name: Validar Terraform
-        run: terraform validate
+        run: terraform validate -chdir=terraform/
 
       - name: Aplicar Terraform
-        run: terraform apply -auto-approve
+        run: terraform apply -auto-approve -chdir=terraform/
 
       # - name: Destruir Terraform
-      #   run: terraform destroy -auto-approve
+      #   run: terraform destroy -auto-approve -chdir=terraform/
