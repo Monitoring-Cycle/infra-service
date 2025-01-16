@@ -1,45 +1,42 @@
-name: Deploy Zabbix Infrastructure
+name: AWS Pipeline
 
 on:
   push:
     branches:
-      - developer
+      - main
 
 jobs:
-  terraform:
+  tf-run:
+    name: Terraform run on AWS
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout código
+      # Step 01 - Checkout do Código
+      - name: Step 01 - Checkout GitHub Repo
         uses: actions/checkout@v3
 
-      - name: Configure AWS credentials
+      # Step 02 - Configurar Credenciais AWS
+      - name: Step 02 - Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v2
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: us-east-1
 
-      - name: Testar credenciais AWS
-        run: aws sts get-caller-identity
-
-      - name: Verificar estrutura de arquivos
-        run: |
-          echo "Arquivos no diretório terraform/:"
-          ls -la terraform/
-
-      - name: Instalar Terraform
+      # Step 03 - Instalar Terraform
+      - name: Step 03 - Terraform Setup
         uses: hashicorp/setup-terraform@v2
         with:
           terraform_version: 1.5.0
 
-      - name: Inicializar Terraform
-        run: terraform init -chdir=terraform/ -input=false -reconfigure -upgrade
-        env:
-          TF_LOG: DEBUG
+      # Step 04 - Inicializar Terraform
+      - name: Step 04 - Terraform Init
+        run: terraform -chdir=./terraform/ init -input=false
 
-      - name: Validar Terraform
-        run: terraform validate -chdir=terraform/
+      # Step 05 - Validar Terraform
+      - name: Step 05 - Terraform Validate
+        run: terraform -chdir=./terraform/ validate
 
-      - name: Aplicar Terraform
-        run: terraform apply -auto-approve -chdir=terraform/
+      # Step 06 - Planejar Terraform
+      - name: Step 06 - Terraform Plan
+        run: terraform -chdir=./terraform/ plan -input
