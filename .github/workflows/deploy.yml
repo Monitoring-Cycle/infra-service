@@ -55,8 +55,8 @@ jobs:
         run: terraform -chdir=./terraform/ plan -input=false
 
       # Step 09 - Aplicar Terraform
-      - name: Step 09 - Terraform Apply
-        run: terraform -chdir=./terraform/ apply -auto-approve -input=false
+      # - name: Step 09 - Terraform Apply
+      #   run: terraform -chdir=./terraform/ apply -auto-approve -input=false
 
       # Step 10 - Atualizar Estado Terraform (Evita erro "No objects need to be destroyed")
       - name: Step 10 - Terraform Refresh
@@ -71,9 +71,9 @@ jobs:
         run: terraform -chdir=./terraform/ plan -destroy -input=false
 
       # Step 13 - Destruir Terraform (Comentado por padrão)
-      # - name: Step 13 - Terraform Destroy
-      #   run: terraform -chdir=./terraform/ destroy -auto-approve -input=false
+      - name: Step 13 - Terraform Destroy
+        run: terraform -chdir=./terraform/ destroy -auto-approve -input=false
 
       # Step 14 - Remover Estado Local Apenas Após a Destruição (Comentado por padrão)
-      # - name: Step 14 - Clean Terraform State
-      #   run: rm -rf terraform/.terraform terraform/.terraform.lock.hcl terraform/terraform.tfstate
+      - name: Step 14 - Clean Terraform State
+        run: rm -rf terraform/.terraform terraform/.terraform.lock.hcl terraform/terraform.tfstate
