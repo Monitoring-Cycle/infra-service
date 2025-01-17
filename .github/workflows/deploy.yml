@@ -75,5 +75,5 @@ jobs:
         run: terraform -chdir=./terraform/ destroy -auto-approve -input=false
 
       # Step 14 - Remover Estado Local Apenas Após a Destruição (Comentado por padrão)
-      - name: Step 14 - Clean Terraform State
-        run: rm -rf terraform/.terraform terraform/.terraform.lock.hcl terraform/terraform.tfstate
+      # - name: Step 14 - Clean Terraform State
+      #   run: rm -rf terraform/.terraform terraform/.terraform.lock.hcl terraform/terraform.tfstate
