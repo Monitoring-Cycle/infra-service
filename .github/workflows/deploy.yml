@@ -3,7 +3,7 @@ name: AWS Pipeline
 on:
   push:
     branches:
-      - main
+      - developer
 
 jobs:
   tf-run:
