@@ -3,7 +3,7 @@ name: AWS Pipeline
 on:
   push:
     branches:
-      - main
+      - developer
 
 jobs:
   tf-run:
@@ -32,8 +32,6 @@ jobs:
       # Step 04 - Inicializar Terraform
       - name: Step 04 - Terraform Init
         run: terraform init -chdir=terraform/ -input=false -reconfigure -upgrade
-        env:
-          TF_LOG: DEBUG
 
       # Step 05 - Validar Terraform
       - name: Step 05 - Terraform Validate
