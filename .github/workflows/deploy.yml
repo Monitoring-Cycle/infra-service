@@ -3,7 +3,7 @@ name: AWS Pipeline
 on:
   push:
     branches:
-      - developer
+      - main
 
 jobs:
   tf-run:
@@ -29,18 +29,51 @@ jobs:
         with:
           terraform_version: 1.5.0
 
-      # Step 04 - Inicializar Terraform
-      - name: Step 04 - Terraform Init
-        run: terraform init -chdir=terraform/ -input=false -reconfigure -upgrade
+      # Step 04 - Debug Terraform Directory
+      - name: Step 04 - Debug Terraform Directory
+        run: |
+          pwd
+          ls -la
+          ls -la terraform/
 
-      # Step 05 - Validar Terraform
-      - name: Step 05 - Terraform Validate
-        run: terraform validate -chdir=terraform/
+      # Step 05 - Remover estado local (evita conflitos de estado corrompido)
+      - name: Step 05 - Clean Terraform State
+        run: rm -rf terraform/.terraform terraform/.terraform.lock.hcl terraform/terraform.tfstate
 
-      # Step 06 - Planejar Terraform
-      - name: Step 06 - Terraform Plan
-        run: terraform plan -chdir=terraform/ -input=false -out=tfplan
+      # Step 06 - Inicializar Terraform
+      - name: Step 06 - Terraform Init
+        run: terraform -chdir=./terraform/ init -input=false -reconfigure -upgrade
+        env:
+          TF_LOG: DEBUG
 
-      # Step 07 - Aplicar Terraform
-      - name: Step 07 - Terraform Apply
-        run: terraform apply -chdir=terraform/ -auto-approve tfplan
+      # Step 07 - Validar Terraform
+      - name: Step 07 - Terraform Validate
+        run: terraform -chdir=./terraform/ validate
+
+      # Step 08 - Planejar Terraform
+      - name: Step 08 - Terraform Plan
+        run: terraform -chdir=./terraform/ plan -input=false
+
+      # Step 09 - Aplicar Terraform
+      - name: Step 09 - Terraform Apply
+        run: terraform -chdir=./terraform/ apply -auto-approve -input=false
+
+      # Step 10 - Atualizar Estado Terraform (Evita erro "No objects need to be destroyed")
+      - name: Step 10 - Terraform Refresh
+        run: terraform -chdir=./terraform/ refresh
+
+      # Step 11 - Verificar Recursos Antes do Destroy
+      - name: Step 11 - List Terraform Resources
+        run: terraform -chdir=./terraform/ state list
+
+      # Step 12 - Planejar Destruição
+      # - name: Step 12 - Terraform Plan (Destroy)
+      #   run: terraform -chdir=./terraform/ plan -destroy -input=false
+
+      # # Step 13 - Destruir Terraform (Comentado por padrão)
+      # - name: Step 13 - Terraform Destroy
+      #   run: terraform -chdir=./terraform/ destroy -auto-approve -input=false
+
+      # Step 14 - Remover Estado Local Apenas Após a Destruição (Comentado por padrão)
+      # - name: Step 14 - Clean Terraform State
+      #   run: rm -rf terraform/.terraform terraform/.terraform.lock.hcl terraform/terraform.tfstate
