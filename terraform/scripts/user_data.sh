@@ -126,3 +126,4 @@ docker ps
 echo "✅ Configuração finalizada!"
 echo "🔹 Acesse o Zabbix Web em: http://$(curl -s ifconfig.me):8080"
 echo "🔹 Acesse o Grafana em: http://$(curl -s ifconfig.me):3000 (Usuário: admin | Senha: admin)"
+
