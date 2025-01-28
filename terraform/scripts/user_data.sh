@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -e  # Para interromper o script em caso de erro
+set -e  # Interrompe o script em caso de erro
 
 echo "🔹 Atualizando pacotes e instalando dependências..."
 apt-get update -y
@@ -29,7 +29,7 @@ echo "🔹 Reiniciando o Docker..."
 systemctl restart docker
 
 echo "🔹 Criando rede Docker para os containers Zabbix..."
-docker network create --subnet=172.20.0.0/16 --ip-range=172.20.240.0/20 zabbix-net
+docker network create --subnet=172.20.0.0/16 --ip-range=172.20.240.0/20 zabbix-net || true
 
 echo "🔹 Criando diretórios para persistência de dados..."
 mkdir -p /opt/zabbix/mysql /opt/zabbix/server /opt/zabbix/web /opt/grafana/data
@@ -53,15 +53,12 @@ docker run -d \
   --collation-server=utf8mb4_unicode_ci \
   --default-authentication-plugin=mysql_native_password
 
-echo "🔹 Aguardando o MySQL estar pronto..."
-while ! docker exec mysql-server mysqladmin ping -h "localhost" --silent; do
+echo "🔹 Aguardando o MySQL iniciar..."
+until docker exec mysql-server mysqladmin ping -h "localhost" --silent; do
     sleep 5
     echo "⌛ Aguardando MySQL..."
 done
-
-echo "✅ Ajustando MySQL para aceitar conexões externas..."
-docker exec mysql-server bash -c "echo \"bind-address = 0.0.0.0\" >> /etc/mysql/mysql.conf.d/mysqld.cnf"
-docker restart mysql-server
+echo "✅ MySQL está pronto!"
 
 echo "✅ Subindo o Zabbix Server..."
 docker run -d \
@@ -76,6 +73,13 @@ docker run -d \
   -p 10051:10051 \
   --restart unless-stopped \
   zabbix/zabbix-server-mysql:alpine-7.2-latest
+
+echo "🔹 Aguardando o Zabbix Server iniciar..."
+until docker logs zabbix-server-mysql 2>&1 | grep -q "Starting Zabbix Server"; do
+    sleep 5
+    echo "⌛ Aguardando Zabbix Server..."
+done
+echo "✅ Zabbix Server está pronto!"
 
 echo "✅ Subindo o Zabbix Web Interface..."
 docker run -d \
@@ -116,6 +120,9 @@ docker run -d \
 echo "✅ Configurando firewall para permitir acesso ao Zabbix e Grafana..."
 ufw allow 8080/tcp
 ufw allow 3000/tcp
+
+echo "✅ Verificando containers em execução..."
+docker ps
 
 echo "✅ Configuração finalizada!"
 echo "🔹 Acesse o Zabbix Web em: http://$(curl -s ifconfig.me):8080"
