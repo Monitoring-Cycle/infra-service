@@ -63,3 +63,4 @@ echo "==== Logs dos Contêineres ===="
 docker logs zabbix-db
 docker logs zabbix-server
 docker logs zabbix-web
+
