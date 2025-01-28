@@ -1,46 +1,44 @@
 #!/bin/bash
 
-# Atualizar pacotes e instalar dependências
-apt-get update -y
-apt-get install -y apt-transport-https ca-certificates curl software-properties-common gnupg lsb-release
+set -e  # Para interromper o script em caso de erro
 
-# Adicionar chave GPG e repositório oficial do Docker
+echo "🔹 Atualizando pacotes e instalando dependências..."
+apt-get update -y
+apt-get install -y apt-transport-https ca-certificates curl software-properties-common gnupg lsb-release ufw
+
+echo "🔹 Adicionando chave GPG e repositório oficial do Docker..."
 curl -fsSL https://download.docker.com/linux/ubuntu/gpg | apt-key add -
 add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
 
-# Atualizar pacotes novamente e instalar Docker
+echo "🔹 Instalando Docker e Docker Compose..."
 apt-get update -y
-apt-get install -y docker-ce docker-ce-cli containerd.io
+apt-get install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
 
-# Iniciar e habilitar o Docker
+echo "🔹 Iniciando e habilitando o Docker..."
 systemctl start docker
 systemctl enable docker
 
-# Criar o grupo 'docker' se não existir
+echo "🔹 Criando grupo 'docker' e ajustando permissões..."
 if ! getent group docker > /dev/null; then
   groupadd docker
 fi
-
-# Adicionar o usuário padrão 'ubuntu' ao grupo 'docker'
 usermod -aG docker ubuntu
+chmod 666 /var/run/docker.sock
 
-# Ajustar permissões no socket do Docker
-chmod 660 /var/run/docker.sock
-
-# Reiniciar o Docker para garantir as permissões
+echo "🔹 Reiniciando o Docker..."
 systemctl restart docker
 
-# Criar rede Docker para os containers Zabbix
+echo "🔹 Criando rede Docker para os containers Zabbix..."
 docker network create --subnet=172.20.0.0/16 --ip-range=172.20.240.0/20 zabbix-net
 
-# Criar diretórios para persistência de dados
+echo "🔹 Criando diretórios para persistência de dados..."
 mkdir -p /opt/zabbix/mysql /opt/zabbix/server /opt/zabbix/web /opt/grafana/data
 
-# Ajustar permissões para o Grafana
+echo "🔹 Ajustando permissões para o Grafana..."
 chown 472:472 /opt/grafana/data
 chmod 755 /opt/grafana/data
 
-# Subir o container MySQL com volume para persistência
+echo "✅ Subindo o container MySQL..."
 docker run -d \
   --name mysql-server \
   -e MYSQL_DATABASE="zabbix" \
@@ -50,12 +48,22 @@ docker run -d \
   -v /opt/zabbix/mysql:/var/lib/mysql \
   --network=zabbix-net \
   --restart unless-stopped \
-  mysql:8.0-oracle \
-  --character-set-server=utf8 \
-  --collation-server=utf8_bin \
+  mysql:8.0 \
+  --character-set-server=utf8mb4 \
+  --collation-server=utf8mb4_unicode_ci \
   --default-authentication-plugin=mysql_native_password
 
-# Subir o container Zabbix Server com volume para persistência
+echo "🔹 Aguardando o MySQL estar pronto..."
+while ! docker exec mysql-server mysqladmin ping -h "localhost" --silent; do
+    sleep 5
+    echo "⌛ Aguardando MySQL..."
+done
+
+echo "✅ Ajustando MySQL para aceitar conexões externas..."
+docker exec mysql-server bash -c "echo \"bind-address = 0.0.0.0\" >> /etc/mysql/mysql.conf.d/mysqld.cnf"
+docker restart mysql-server
+
+echo "✅ Subindo o Zabbix Server..."
 docker run -d \
   --name zabbix-server-mysql \
   -e DB_SERVER_HOST="mysql-server" \
@@ -69,7 +77,7 @@ docker run -d \
   --restart unless-stopped \
   zabbix/zabbix-server-mysql:alpine-7.2-latest
 
-# Subir o container Zabbix Web Interface com volume para persistência
+echo "✅ Subindo o Zabbix Web Interface..."
 docker run -d \
   --name zabbix-web-nginx-mysql \
   -e ZBX_SERVER_HOST="zabbix-server-mysql" \
@@ -85,7 +93,7 @@ docker run -d \
   --restart unless-stopped \
   zabbix/zabbix-web-nginx-mysql:alpine-7.2-latest
 
-# Subir o container Zabbix Agent
+echo "✅ Subindo o Zabbix Agent..."
 docker run -d \
   --name zabbix-agent \
   -e ZBX_SERVER_HOST="zabbix-server-mysql" \
@@ -94,7 +102,7 @@ docker run -d \
   --restart unless-stopped \
   zabbix/zabbix-agent:alpine-7.2-latest
 
-# Subir o container Grafana com volume para persistência e permissões corrigidas
+echo "✅ Subindo o Grafana..."
 docker run -d \
   --name grafana \
   -e GF_SECURITY_ADMIN_USER="admin" \
@@ -105,18 +113,10 @@ docker run -d \
   --restart unless-stopped \
   grafana/grafana:latest
 
-# Instalar Node.js e dependências
-curl -fsSL https://deb.nodesource.com/setup_16.x | bash -
-apt-get install -y nodejs
+echo "✅ Configurando firewall para permitir acesso ao Zabbix e Grafana..."
+ufw allow 8080/tcp
+ufw allow 3000/tcp
 
-# Configuração adicional para aplicativos Node.js (se necessário)
-mkdir -p /var/www/myapp
-cd /var/www/myapp
-npm init -y
-npm install express
-
-# Mensagem de conclusão
-echo "Configuração do Zabbix, Zabbix Agent, Grafana e ambiente Node.js concluída!"
-echo "Acesse a interface web do Zabbix em http://<IP_DO_SERVIDOR>:8080"
-echo "Acesse a interface do Grafana em http://<IP_DO_SERVIDOR>:3000 (Usuário: admin | Senha: admin)"
-
+echo "✅ Configuração finalizada!"
+echo "🔹 Acesse o Zabbix Web em: http://$(curl -s ifconfig.me):8080"
+echo "🔹 Acesse o Grafana em: http://$(curl -s ifconfig.me):3000 (Usuário: admin | Senha: admin)"
