@@ -62,17 +62,17 @@ echo "✅ MySQL está pronto!"
 
 echo "✅ Subindo o Zabbix Server..."
 docker run -d \
-  --name zabbix-server-mysql \
-  -e DB_SERVER_HOST="mysql-server" \
+  --name mysql-server \
   -e MYSQL_DATABASE="zabbix" \
   -e MYSQL_USER="zabbix" \
   -e MYSQL_PASSWORD="zabbix_pwd" \
   -e MYSQL_ROOT_PASSWORD="root_pwd" \
-  -v /opt/zabbix/server:/var/lib/zabbix \
+  -v /opt/zabbix/mysql:/var/lib/mysql \
   --network=zabbix-net \
-  -p 10051:10051 \
   --restart unless-stopped \
-  zabbix/zabbix-server-mysql:alpine-7.2-latest
+  mysql:8.0-oracle \
+  --default-authentication-plugin=mysql_native_password \
+  --ssl=0
 
 echo "🔹 Aguardando o Zabbix Server iniciar..."
 until docker logs zabbix-server-mysql 2>&1 | grep -q "Starting Zabbix Server"; do
@@ -91,9 +91,8 @@ docker run -d \
   -e MYSQL_PASSWORD="zabbix_pwd" \
   -e MYSQL_ROOT_PASSWORD="root_pwd" \
   -e PHP_TZ="America/Sao_Paulo" \
-  -v /opt/zabbix/web:/usr/share/zabbix \
-  --network=zabbix-net \
   -p 8080:80 \
+  --network=zabbix-net \
   --restart unless-stopped \
   zabbix/zabbix-web-nginx-mysql:alpine-7.2-latest
 
