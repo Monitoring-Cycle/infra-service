@@ -119,3 +119,4 @@ npm install express
 echo "Configuração do Zabbix, Zabbix Agent, Grafana e ambiente Node.js concluída!"
 echo "Acesse a interface web do Zabbix em http://<IP_DO_SERVIDOR>:8080"
 echo "Acesse a interface do Grafana em http://<IP_DO_SERVIDOR>:3000 (Usuário: admin | Senha: admin)"
+
