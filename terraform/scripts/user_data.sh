@@ -52,7 +52,7 @@ docker run -d \
 
 echo "🔹 Aguardando o PostgreSQL iniciar..."
 until docker exec postgres-server pg_isready -U zabbix; do
-    sleep 5
+    sleep 20
     echo "⌛ Aguardando PostgreSQL..."
 done
 echo "✅ PostgreSQL está pronto!"
@@ -127,7 +127,7 @@ EOF
           try_files \$uri \$uri/ =404;
       }
 
-      location ~ \.php$ {
+      location ~ \.php\$ {
           include fastcgi_params;
           fastcgi_pass 127.0.0.1:9000;
           fastcgi_index index.php;
@@ -138,6 +138,9 @@ EOF
       access_log /var/log/nginx/access.log;
   }
   ' > /etc/nginx/http.d/default.conf &&
+  nginx -s reload &&
+  php-fpm83 -D &&
+ 
   nginx -s reload &&
   php-fpm83 -D
 "
@@ -150,6 +153,11 @@ docker run -d \
   --network=zabbix-net \
   --restart unless-stopped \
   zabbix/zabbix-agent:latest
+
+echo "🔹 Ajustando permissões para o Grafana..."
+chown -R 472:472 /opt/grafana/data
+chmod -R 755 /opt/grafana/data
+
 
 echo "✅ Subindo o Grafana..."
 docker run -d \
