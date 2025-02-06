@@ -77,6 +77,7 @@ docker run -d \
   --name zabbix-web-nginx-pgsql \
   -e ZBX_SERVER_HOST="zabbix-server" \
   -e DB_SERVER_HOST="postgres-server" \
+  -e DB_SERVER_TYPE="POSTGRESQL" \
   -e POSTGRES_USER="zabbix" \
   -e POSTGRES_PASSWORD="zabbix_pwd" \
   -e POSTGRES_DB="zabbix" \
@@ -85,6 +86,44 @@ docker run -d \
   --network=zabbix-net \
   --restart unless-stopped \
   zabbix/zabbix-web-nginx-pgsql:latest
+
+echo "✅ Ajustando permissões no Zabbix Web (Nginx e PHP-FPM)..."
+docker exec -u root zabbix-web-nginx-pgsql bash -c "
+  chmod 1777 /tmp &&
+  chown -R zabbix:zabbix /tmp &&
+  mkdir -p /var/run/php &&
+  chown zabbix:zabbix /var/run/php &&
+  chmod 777 /var/run/php &&
+  mkdir -p /var/log &&
+  touch /var/log/php-fpm.log &&
+  chown zabbix:zabbix /var/log/php-fpm.log &&
+  chmod 777 /var/log/php-fpm.log &&
+  echo '
+  server {
+      listen 80;
+      server_name _;
+
+      root /usr/share/zabbix;
+      index index.php index.html index.htm;
+
+      location / {
+          try_files \$uri \$uri/ =404;
+      }
+
+      location ~ \.php$ {
+          include fastcgi_params;
+          fastcgi_pass 127.0.0.1:9000;
+          fastcgi_index index.php;
+          fastcgi_param SCRIPT_FILENAME \$document_root\$fastcgi_script_name;
+      }
+
+      error_log /var/log/nginx/error.log;
+      access_log /var/log/nginx/access.log;
+  }
+  ' > /etc/nginx/http.d/default.conf &&
+  nginx -s reload &&
+  php-fpm83 -D
+"
 
 echo "✅ Subindo o Zabbix Agent..."
 docker run -d \
