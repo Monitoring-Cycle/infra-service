@@ -98,6 +98,23 @@ docker exec -u root zabbix-web-nginx-pgsql bash -c "
   touch /var/log/php-fpm.log &&
   chown zabbix:zabbix /var/log/php-fpm.log &&
   chmod 777 /var/log/php-fpm.log &&
+  cat > /etc/php83/php-fpm.d/zabbix.conf <<EOF
+[zabbix]
+user = zabbix
+group = zabbix
+listen = 127.0.0.1:9000
+listen.owner = zabbix
+listen.group = zabbix
+listen.mode = 0660
+
+pm = dynamic
+pm.max_children = 10
+pm.start_servers = 2
+pm.min_spare_servers = 1
+pm.max_spare_servers = 5
+
+php_value[date.timezone] = America/Sao_Paulo
+EOF
   echo '
   server {
       listen 80;
