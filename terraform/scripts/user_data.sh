@@ -23,87 +23,77 @@ if ! getent group docker > /dev/null; then
   groupadd docker
 fi
 usermod -aG docker ubuntu
-chmod 666 /var/run/docker.sock
+chown ubuntu:docker /var/run/docker.sock
 
 echo "🔹 Reiniciando o Docker..."
 systemctl restart docker
 
 echo "🔹 Criando rede Docker para os containers Zabbix..."
-docker network create --subnet=172.20.0.0/16 --ip-range=172.20.240.0/20 zabbix-net || true
+docker network rm zabbix-net || true  # Remove a rede se já existir
+docker network create --subnet=172.20.0.0/16 --ip-range=172.20.240.0/20 zabbix-net
 
 echo "🔹 Criando diretórios para persistência de dados..."
-mkdir -p /opt/zabbix/mysql /opt/zabbix/server /opt/zabbix/web /opt/grafana/data
+mkdir -p /opt/zabbix/postgres /opt/zabbix/server /opt/zabbix/web /opt/grafana/data
 
 echo "🔹 Ajustando permissões para o Grafana..."
 chown 472:472 /opt/grafana/data
 chmod 755 /opt/grafana/data
 
-echo "✅ Subindo o container MySQL..."
+echo "✅ Subindo o container PostgreSQL..."
 docker run -d \
-  --name mysql-server \
-  -e MYSQL_DATABASE="zabbix" \
-  -e MYSQL_USER="zabbix" \
-  -e MYSQL_PASSWORD="zabbix_pwd" \
-  -e MYSQL_ROOT_PASSWORD="root_pwd" \
-  -v /opt/zabbix/mysql:/var/lib/mysql \
+  --name postgres-server \
+  -e POSTGRES_DB="zabbix" \
+  -e POSTGRES_USER="zabbix" \
+  -e POSTGRES_PASSWORD="zabbix_pwd" \
+  -v /opt/zabbix/postgres:/var/lib/postgresql/data \
   --network=zabbix-net \
   --restart unless-stopped \
-  mysql:8.0 \
-  --character-set-server=utf8mb4 \
-  --collation-server=utf8mb4_unicode_ci \
-  --default-authentication-plugin=mysql_native_password
+  postgres:latest
 
-echo "🔹 Aguardando o MySQL iniciar..."
-until docker exec mysql-server mysqladmin ping -h "localhost" --silent; do
+echo "🔹 Aguardando o PostgreSQL iniciar..."
+until docker exec postgres-server pg_isready -U zabbix; do
     sleep 5
-    echo "⌛ Aguardando MySQL..."
+    echo "⌛ Aguardando PostgreSQL..."
 done
-echo "✅ MySQL está pronto!"
+echo "✅ PostgreSQL está pronto!"
 
 echo "✅ Subindo o Zabbix Server..."
 docker run -d \
-  --name mysql-server \
-  -e MYSQL_DATABASE="zabbix" \
-  -e MYSQL_USER="zabbix" \
-  -e MYSQL_PASSWORD="zabbix_pwd" \
-  -e MYSQL_ROOT_PASSWORD="root_pwd" \
-  -v /opt/zabbix/mysql:/var/lib/mysql \
+  --name zabbix-server \
+  -e DB_SERVER_HOST="postgres-server" \
+  -e POSTGRES_USER="zabbix" \
+  -e POSTGRES_PASSWORD="zabbix_pwd" \
+  -e POSTGRES_DB="zabbix" \
+  -v /opt/zabbix/server:/var/lib/zabbix \
   --network=zabbix-net \
   --restart unless-stopped \
-  mysql:8.0-oracle \
-  --default-authentication-plugin=mysql_native_password \
-  --ssl=0
+  zabbix/zabbix-server-pgsql:latest
 
 echo "🔹 Aguardando o Zabbix Server iniciar..."
-until docker logs zabbix-server-mysql 2>&1 | grep -q "Starting Zabbix Server"; do
-    sleep 5
-    echo "⌛ Aguardando Zabbix Server..."
-done
-echo "✅ Zabbix Server está pronto!"
+sleep 10
 
 echo "✅ Subindo o Zabbix Web Interface..."
 docker run -d \
-  --name zabbix-web-nginx-mysql \
-  -e ZBX_SERVER_HOST="zabbix-server-mysql" \
-  -e DB_SERVER_HOST="mysql-server" \
-  -e MYSQL_DATABASE="zabbix" \
-  -e MYSQL_USER="zabbix" \
-  -e MYSQL_PASSWORD="zabbix_pwd" \
-  -e MYSQL_ROOT_PASSWORD="root_pwd" \
+  --name zabbix-web-nginx-pgsql \
+  -e ZBX_SERVER_HOST="zabbix-server" \
+  -e DB_SERVER_HOST="postgres-server" \
+  -e POSTGRES_USER="zabbix" \
+  -e POSTGRES_PASSWORD="zabbix_pwd" \
+  -e POSTGRES_DB="zabbix" \
   -e PHP_TZ="America/Sao_Paulo" \
-  -p 8080:80 \
+  --publish 8080:80 \
   --network=zabbix-net \
   --restart unless-stopped \
-  zabbix/zabbix-web-nginx-mysql:alpine-7.2-latest
+  zabbix/zabbix-web-nginx-pgsql:latest
 
 echo "✅ Subindo o Zabbix Agent..."
 docker run -d \
   --name zabbix-agent \
-  -e ZBX_SERVER_HOST="zabbix-server-mysql" \
+  -e ZBX_SERVER_HOST="zabbix-server" \
   -e ZBX_HOSTNAME="zabbix-agent-ec2" \
   --network=zabbix-net \
   --restart unless-stopped \
-  zabbix/zabbix-agent:alpine-7.2-latest
+  zabbix/zabbix-agent:latest
 
 echo "✅ Subindo o Grafana..."
 docker run -d \
@@ -111,7 +101,7 @@ docker run -d \
   -e GF_SECURITY_ADMIN_USER="admin" \
   -e GF_SECURITY_ADMIN_PASSWORD="admin" \
   -v /opt/grafana/data:/var/lib/grafana \
-  -p 3000:3000 \
+  --publish 3000:3000 \
   --network=zabbix-net \
   --restart unless-stopped \
   grafana/grafana:latest
@@ -119,6 +109,7 @@ docker run -d \
 echo "✅ Configurando firewall para permitir acesso ao Zabbix e Grafana..."
 ufw allow 8080/tcp
 ufw allow 3000/tcp
+ufw enable -y
 
 echo "✅ Verificando containers em execução..."
 docker ps
@@ -126,4 +117,3 @@ docker ps
 echo "✅ Configuração finalizada!"
 echo "🔹 Acesse o Zabbix Web em: http://$(curl -s ifconfig.me):8080"
 echo "🔹 Acesse o Grafana em: http://$(curl -s ifconfig.me):3000 (Usuário: admin | Senha: admin)"
-
